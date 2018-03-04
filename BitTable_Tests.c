@@ -1,5 +1,7 @@
 
 #include "BitTable.h"
+#include "FatalException.h"
+
 void tBitTable_Supported(CuTest *qt)
 {
 	CuAssertIntEquals(qt, 1, unsigned_t_bits == 32 || unsigned_t_bits == 64 || unsigned_t_bits == 16);
@@ -102,9 +104,44 @@ void tBITTABLE_GET_SET(CuTest *qt)
 	CuAssertIntEquals(qt, 1, BITTABLE_GET(tt, 20));
 	CuAssertIntEquals(qt, 0, BITTABLE_GET(tt, 21));
 }
+int xBT_SetBitPos(unsigned_t *inU, int STARTBIT, size_t numUelems)
+{
+	size_t i;
+	unsigned_t *U;
+	for(i=STARTBIT/unsigned_t_bits;i<numUelems;++i)
+	{
+		U = &inU[i];
+		if(*U == unsigned_t_allcleared)
+		{
+			continue;
+		} else
+		{
+			int j;
+			for(j = STARTBIT & unsigned_t_sizemask; j<unsigned_t_bits; ++j)
+			{
+				if(BITTABLE_GET(U, j))
+				{
+					return SIZE_T_TO_INT((i * unsigned_t_bits)) + j;
+				}
+			}
+			return 0;
+		}
+	}
+	return 0;
+}
+void tBT_SetBitPos(CuTest *qt)
+{
+	BITTABLE_DECLARE(tt, 120);
+	BITTABLE_INIT(tt, 0);
+	BITTABLE_SET(tt, 82, 1);
+	BITTABLE_SET(tt, 89, 1);
+	CuAssertIntEquals(qt, 82, xBT_SetBitPos(tt, 0, sizeof(tt)/sizeof(unsigned_t)));
+	CuAssertIntEquals(qt, 89, xBT_SetBitPos(tt, 83, sizeof(tt)/sizeof(unsigned_t)));
+}
 CuSuite* tBitTable_GetSuite(void)
 {
 	CuSuite* suite = CuSuiteNew();
+	SUITE_ADD_TEST(suite, tBT_SetBitPos);
 	SUITE_ADD_TEST(suite, tBITTABLE_GET_SET);
 	SUITE_ADD_TEST(suite, tBT_Set);
 	SUITE_ADD_TEST(suite, tBT_Clear);
